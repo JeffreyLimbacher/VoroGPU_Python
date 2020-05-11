@@ -61,7 +61,7 @@ def compute_boundary(R):
     while len(R) != 0:
         found = False
         for i, r in enumerate(R):
-            if is_simple_cycle_back(delta_R, r):
+            if is_simple_cycle_all(delta_R, r):
                 delta_R.append(r)
                 found = True
                 break
@@ -85,6 +85,12 @@ def share_edge(r1, r2):
 def get_dual_edges(r):
     for i in range(len(r)):
         yield (r[i-1], r[i]) if r[i-1] < r[i] else (r[i], r[i-1])
+
+def is_simple_cycle_all(delta_R, r):
+    for i in range(len(delta_R)):
+         if is_simple_cycle_pos(delta_R, r, i):
+             return True
+    return False
             
 def is_simple_cycle_back(delta_R, r):
     return is_simple_cycle_pos(delta_R, r, -1)
@@ -111,22 +117,18 @@ def clip_by_plane(T, P, p, pt):
         plane_inds = T[i]
         planes = [P[p_i] for p_i in plane_inds]
         intersection_pt = intersect_planes(*planes)
-        if within_halfspace(intersection_pt, p):
+        if not within_halfspace(intersection_pt, p):
             R.append(plane_inds)
             T.pop(i)
         else:
             i += 1
     if len(R) > 0:
         P.append(p)
-        _debug_R = R.copy()
         delta_R = compute_boundary(R)
-        _debug = list(dual_boundary(delta_R))
         for edge in dual_boundary(delta_R):
             if len(edge) != 2:
                 raise
             T.append((*edge, len(P)-1))
-    print(T)
-    T_pts = [intersect_planes(*(P[p_i] for p_i in p)) for p in T]
     return np.array(T), np.array(P)
 
 
@@ -173,7 +175,8 @@ def main():
             T, P = clip_by_plane(T, P, eq, pt)
         final_Ps.append(P)
         final_Ts.append(T)
-    
+    print(final_Ps)
+    print(final_Ts)
         
         
 
