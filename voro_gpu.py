@@ -49,6 +49,9 @@ def within_halfspace(point, plane):
     return dot_val > 0
 
 
+def calc_norm(p):
+    return (p**2).sum(axis=-1)
+
 def intersect_planes(pu, pv, pw):
     b = -np.array((pu[-1], pv[-1], pw[-1]))
     Arows = (pu[:-1], pv[:-1], pw[:-1])
@@ -147,7 +150,6 @@ def get_knn(pts, k=1):
     tree = cKDTree(pts)
     distances, knn = tree.query(pts, k+1)
     knn = knn[:,1:]
-    
     return knn
 
 def build_median_plane_matrix(pts, knn):
@@ -155,7 +157,39 @@ def build_median_plane_matrix(pts, knn):
     npt_arr = pts[knn]
     arr = median_plane(pts[:,np.newaxis,:], npt_arr)
     return arr
+
+# Project a point onto a plane where the plane is given by an equation (4-tuple)
+def project_onto_plane(pt, plane):
+    err = point_dot_plane(pt, plane)
+    norm = plane[:len(pt)]
+    new_pt = pt - norm*err
+    return new_pt
+
+def line_from_planes(p1, p2):
+    n1 = p1[:len(p1)-1]
+    n2 = p2[:len(p2)-1]
+    line = np.cross(n1, n2)
+    if(calc_norm(line) < 1e-10):
+        raise
+    # create random plane from line and intersect it with the other to get a point
+    random_plane = np.concatenate((line, [0]))
+    random_pt = intersect_planes(p1, p2, random_plane)
+    random_pt2 = random_pt+line
+    return (random_pt, random_pt2)
     
+def project_onto_line(p, p1, p2):
+    line_pt1, line_pt2 = line_from_planes(p1, p2)
+    line_to_point = p - line_pt1
+    line = line_pt2 - line_pt1
+    proj_vector = line_to_point.dot(line)*line
+    return proj_vector + line_pt1
+    
+
+def barycenters_and_volumes(pt, planes, voronoi_verts):
+    for vert in voronoi_verts:
+        plane_pts = [project_onto_plane(pt, planes[t]) for t in vert]
+        print(plane_pts)
+
 
 def main():
     N = 10
@@ -170,13 +204,12 @@ def main():
     for i,pt in enumerate(pts):
         P = init_P.copy()
         T = init_T.copy()
-        print(f"point {i}")
         for eq in eqs[i]:
             T, P = clip_by_plane(T, P, eq, pt)
+        barycenters_and_volumes(pt, P, T)
         final_Ps.append(P)
         final_Ts.append(T)
-    print(final_Ps)
-    print(final_Ts)
+    
         
         
 
